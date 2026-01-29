@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken'
 import { registerschema,loginSchema } from "../validation/user.validation.js";
 import generateToken from "../utils/generateToken.js";
 import { hashpass,comparepass } from "../utils/password.js";
+import sendMail from "../utils/sendEmail.js";
 const register = asyncHandler(async (req, res) => {
     const validatedData=registerschema.parse(req.body)
     const{username,email,password,role}=validatedData
@@ -19,6 +20,7 @@ const register = asyncHandler(async (req, res) => {
         password: hashpassed,
         role
     })
+   
     const token=generateToken(user)
     const {password:removepass,...withoutpass}=user.toObject()
     return res.status(201).json({
@@ -43,6 +45,15 @@ const login = asyncHandler(async (req, res) => {
             message: "Password it not matched"
         })
     }
+     await sendMail({
+        to:email,
+        subject:'welcome to our app',
+        template:'welcome',
+        data:{
+            username:user.username
+        },
+        text:"you login successfully"
+    })
     const token = generateToken(user)
     const {password:remove,...withoutpass}=user.toObject()
     return res.status(200).json({
@@ -53,4 +64,5 @@ const login = asyncHandler(async (req, res) => {
     })
 
 })
+
 export { register, login }

@@ -1,14 +1,19 @@
-import multer from "multer";
-import path from 'path'
-const storage=multer.diskStorage({ //memory
-    destination:(req,file,cb)=>{
-        cb(null,'uploads/')
-    },
-    filename:(req,file,cb)=>{
-        cb(null,Date.now()+path.extname(file.originalname))
+import multer from 'multer'
+import {CloudinaryStorage} from 'multer-storage-cloudinary'
+import cloudinary from '../config/cloudinary.js'
+const storage=new CloudinaryStorage({
+    cloudinary,
+    params:{
+        folder:'farmsimage',
+         allowedFormats: ["jpg", "jpeg", "png", "webp"],
+       public_id: () => `farm_${Date.now()}`,
+
+        }
     }
+
+)
+const upload=multer({
+    storage,
+    limits:{fileSize:5 * 1024 * 1024},
 })
-const upload=multer({storage,limits:{
-    fileSize:10*1024*1024
-}})
 export default upload

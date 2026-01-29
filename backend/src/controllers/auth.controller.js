@@ -2,25 +2,24 @@ import User from "../models/user.model.js";
 import asyncHandler from "../middlewares/asyncHandler.js";
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
+import { registerschema,loginSchema } from "../validation/user.validation.js";
+import generateToken from "../utils/generateToken.js";
+import { hashpass,comparepass } from "../utils/password.js";
 const register = asyncHandler(async (req, res) => {
-    const { username, email, password, role } = req.body
-    if (!username || !email || !password) {
-        return res.status(400).json({ message: 'All feilds required' })
-    }
+    const validatedData=registerschema.parse(req.body)
+    const{username,email,password,role}=validatedData
     const exsited = await User.findOne({ email })
     if (exsited) {
         return res.status(400).json({ message: "User already exists" })
     }
-    const hashpass = await bcrypt.hash(password, 10)
+    const hashpassed = await hashpass(password)
     const user = await User.create({
         username,
         email,
-        password: hashpass,
+        password: hashpassed,
         role
     })
-    const token=jwt.sign({id:user._id,role:user.role,email:user.email},process.env.JWTSECRET,{
-        expiresIn:'7d'
-    })
+    const token=generateToken(user)
     const {password:removepass,...withoutpass}=user.toObject()
     return res.status(201).json({
         message: 'user created successfully',
@@ -30,28 +29,21 @@ const register = asyncHandler(async (req, res) => {
 
 })
 const login = asyncHandler(async (req, res) => {
-    const { email, password } = req.body
-    if (!email || !password) {
-        return res.status(400).json({
-            message: "All feilds required"
-        })
-    }
+    const validatedData=loginSchema.parse(req.body)
+    const{email,password}=validatedData
     const user = await User.findOne({ email })
     if (!user) {
         return res.status(400).json({
             message: 'user not found'
         })
     }
-    const ismatched = await bcrypt.compare(password, user.password)
+    const ismatched = await comparepass(password, user.password)
     if (!ismatched) {
         return res.status(400).json({
             message: "Password it not matched"
         })
     }
-    const token = jwt.sign({ id: user._id, role: user.role, email: user.email }, process.env.JWTSECRET, {
-        expiresIn: "7d"
-
-    })
+    const token = generateToken(user)
     const {password:remove,...withoutpass}=user.toObject()
     return res.status(200).json({
         message: 'login successfully',

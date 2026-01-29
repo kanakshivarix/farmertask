@@ -21,7 +21,10 @@ const farmSchema = new mongoose.Schema({
         type:Number
     },
     image: {
-        type: String //meta data 
+       url:String,
+       public_id:String,
+       format:String,
+       bytes:Number 
     }
 }, {
     timestamps: true

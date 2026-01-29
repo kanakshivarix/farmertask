@@ -1,7 +1,15 @@
 import asyncHandler from "../middlewares/asyncHandler.js";
 import Farm from "../models/farm.model.js";
+import cloudinary from "../config/cloudinary.js";
+
 const createFarm = asyncHandler(async (req, res) => {
     const { location, landSize, status,price } = req.body
+    const image=req.file ? {
+        url:req.file.path,
+        public_id:req.file.filename,
+        bytes:req.file.size
+
+    } : null
 
     if (!location || !landSize || !price || !status || !req.file) {
 
@@ -15,7 +23,7 @@ const createFarm = asyncHandler(async (req, res) => {
         status,
         price,
         assignedFarm: req.user,
-        image: req.file.filename
+        image,
     })
     return res.status(201).json({
         message: "farm created successfully",
@@ -38,10 +46,27 @@ const gettingfarm = asyncHandler(async (req, res) => {
 })
 const updatingfarm = asyncHandler(async (req, res) => {
     const { id } = req.params
-    const data = { ...req.body }
-    if (req.file) {
-        data.image = req.file.filename
+    const farm=await Farm.findById(id)
+    if(!farm)
+    {
+        return res.status(400).json({
+            message:"farm not found"
+        })
     }
+    const data = { ...req.body }
+     if (req.file) {
+    if (farm.image?.public_id) {
+      await cloudinary.uploader.destroy(farm.image.public_id);
+    }
+
+    // ✅ new image metadata save
+    data.image = {
+      url: req.file.path,          // cloudinary url
+      public_id: req.file.filename,
+      format: req.file.format,
+      bytes: req.file.size,
+    };
+  }
     const updating = await Farm.findByIdAndUpdate(id,
         data,
         { new: true, runValidators: true }

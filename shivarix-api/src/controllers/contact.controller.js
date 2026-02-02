@@ -19,19 +19,50 @@ const createContact=asyncHandler(async(req,res)=>{
     
 
 }) 
-const getcontact=asyncHandler(async(req,res)=>{
-    const contacts=await Contact.find()
-    if(!contacts)
-    {
-        return res.status(401).json({
-            message:"no contacts exists"
-        })
-    }
-    return res.status(200).json({
-        message:"all contacts",
-        contacts
+const getcontact = asyncHandler(async (req, res) => {
+  // Query params
+  const page = parseInt(req.query.page) || 1          // default page 1
+  const limit = parseInt(req.query.limit) || 10       // default 10 items per page
+  const search = req.query.search || ""              // search by fullname, email, company
+  const service = req.query.service || ""            // filter by service
+
+  // Build filter
+  let filter = {}
+  if (search) {
+    filter.$or = [
+      { fullname: { $regex: search, $options: "i" } },
+      { email: { $regex: search, $options: "i" } },
+      { company: { $regex: search, $options: "i" } },
+    ]
+  }
+  if (service) {
+    filter.service = service
+  }
+
+  // Pagination
+  const skip = (page - 1) * limit
+
+  const total = await Contact.countDocuments(filter)
+  const contacts = await Contact.find(filter)
+    .sort({ createdAt: -1 }) // newest first
+    .skip(skip)
+    .limit(limit)
+
+  if (!contacts || contacts.length === 0) {
+    return res.status(404).json({
+      message: "No contacts found",
     })
+  }
+
+  return res.status(200).json({
+    message: "Contacts fetched successfully",
+    total,
+    page,
+    pages: Math.ceil(total / limit),
+    contacts,
+  })
 })
+
 
 export {
     createContact,
